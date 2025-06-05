@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 style="margin-bottom: 2rem; color: #fff;">Hospital Departments</h2>
+
+{% if session.user_type == 'doctor' %}
+<div class="card" style="margin-bottom: 2rem;">
+    <h3>Add New Department</h3>
+    <form method="POST" action="{{ url_for('manage_departments') }}">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label for="name">Department Name:</label>
+                <input type="text" id="name" name="name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="phone">Phone:</label>
+                <input type="tel" id="phone" name="phone" class="form-control" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="description">Description:</label>
+            <textarea id="description" name="description" class="form-control" rows="2" required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="location">Location:</label>
+            <input type="text" id="location" name="location" class="form-control" required>
+        </div>
+        <button type="submit" class="btn">Add Department</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="grid">
+    {% for department in departments %}
+    <div class="card">
+        <h3 style="color: #fff; margin-bottom: 0.5rem;">{{ department[1] }}</h3>
+        <p style="color: #ccc; margin-bottom: 1rem;">{{ department[2] }}</p>
+        
+        <div style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="color: #aaa;">📍 Location:</span>
+                <span>{{ department[4] }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="color: #aaa;">📞 Phone:</span>
+                <span>{{ department[3] }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="color: #aaa;">👨‍⚕️ Doctors:</span>
+                <span>{{ doctor_counts.get(department[0], 0) }}</span>
+            </div>
+            {% if department[5] %}
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: #aaa;">🏥 Head:</span>
+                <span>Dr. {{ department[5] }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if session.user_type == 'patient' %}
+        <a href="{{ url_for('patient_dashboard') }}" class="btn" style="width: 100%;">Book Appointment</a>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

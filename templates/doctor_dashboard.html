@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 style="margin-bottom: 2rem; color: #fff;">Doctor Dashboard</h2>
+
+<div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+    <a href="{{ url_for('view_departments') }}" class="btn btn-secondary">🏢 Departments</a>
+    <a href="{{ url_for('view_medications') }}" class="btn btn-secondary">💊 Medications</a>
+</div>
+
+<!-- Pending Appointments -->
+<div class="card">
+    <h3>Patient Appointments</h3>
+    {% if appointments %}
+    <div style="overflow-x: auto;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Patient</th>
+                    <th>Phone</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for appointment in appointments %}
+                <tr>
+                    <td>{{ appointment[1] }}</td>
+                    <td>{{ appointment[6] }}</td>
+                    <td>{{ appointment[2] }}</td>
+                    <td>{{ appointment[3] }}</td>
+                    <td><span class="status-{{ appointment[4] }}">{{ appointment[4].title() }}</span></td>
+                    <td>{{ appointment[5] or '-' }}</td>
+                    <td>
+                        {% if appointment[4] == 'pending' %}
+                        <button onclick="updateAppointment({{ appointment[0] }}, 'accepted')" class="btn" style="margin-right: 0.5rem; padding: 0.5rem;">Accept</button>
+                        <button onclick="updateAppointment({{ appointment[0] }}, 'rejected')" class="btn btn-danger" style="padding: 0.5rem;">Reject</button>
+                        {% elif appointment[4] == 'accepted' %}
+                        <button onclick="openMedicalRecord({{ appointment[0] }}, '{{ appointment[1] }}')" class="btn" style="padding: 0.5rem;">Medical Record</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: #ccc;">No appointments yet.</p>
+    {% endif %}
+</div>
+
+<!-- Medical Record Modal -->
+<div id="medicalRecordModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeMedicalRecord()">&times;</span>
+        <h3 id="modalTitle">Medical Record</h3>
+        <form id="medicalRecordForm">
+            <input type="hidden" id="appointmentId" name="appointment_id">
+            <div class="form-group">
+                <label for="diagnosis">Diagnosis:</label>
+                <textarea id="diagnosis" name="diagnosis" class="form-control" rows="3" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="prescription">Prescription:</label>
+                <div style="position: relative;">
+                    <input type="text" id="medicationSearch" class="form-control" placeholder="Search medications..." autocomplete="off">
+                    <div id="medicationResults" style="position: absolute; top: 100%; left: 0; right: 0; background: #222; border: 1px solid #333; border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 1001; display: none;"></div>
+                </div>
+                <textarea id="prescription" name="prescription" class="form-control" rows="3" style="margin-top: 0.5rem;" placeholder="Selected medications will appear here..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="medical_notes">Notes:</label>
+                <textarea id="medical_notes" name="notes" class="form-control" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn">Save Medical Record</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let selectedMedications = [];
+    
+    function updateAppointment(appointmentId, status) {
+        fetch('/doctor/update-appointment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                appointment_id: appointmentId,
+                status: status
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error updating appointment');
+            }
+        });
+    }
+    
+    function openMedicalRecord(appointmentId, patientName) {
+        document.getElementById('appointmentId').value = appointmentId;
+        document.getElementById('modalTitle').textContent = 'Medical Record for ' + patientName;
+        document.getElementById('medicalRecordModal').style.display = 'block';
+        selectedMedications = [];
+        updatePrescriptionDisplay();
+    }
+    
+    function closeMedicalRecord() {
+        document.getElementById('medicalRecordModal').style.display = 'none';
+        document.getElementById('medicationResults').style.display = 'none';
+    }
+    
+    // Medication search functionality
+    document.getElementById('medicationSearch').addEventListener('input', function(e) {
+        const query = e.target.value.trim();
+        if (query.length < 2) {
+            document.getElementById('medicationResults').style.display = 'none';
+            return;
+        }
+        
+        fetch(`/api/medications/search?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(medications => {
+                const resultsDiv = document.getElementById('medicationResults');
+                resultsDiv.innerHTML = '';
+                
+                if (medications.length > 0) {
+                    medications.forEach(med => {
+                        const div = document.createElement('div');
+                        div.style.cssText = 'padding: 0.75rem; cursor: pointer; border-bottom: 1px solid #333;';
+                        div.innerHTML = `
+                            <strong>${med.name}</strong> (${med.generic_name})<br>
+                            <small style="color: #ccc;">${med.dosage} - ${med.price}</small>
+                        `;
+                        div.addEventListener('click', () => addMedication(med));
+                        div.addEventListener('mouseenter', () => div.style.background = '#333');
+                        div.addEventListener('mouseleave', () => div.style.background = 'transparent');
+                        resultsDiv.appendChild(div);
+                    });
+                    resultsDiv.style.display = 'block';
+                } else {
+                    resultsDiv.style.display = 'none';
+                }
+            });
+    });
+    
+    function addMedication(medication) {
+        // Check if medication already selected
+        if (!selectedMedications.find(med => med.id === medication.id)) {
+            selectedMedications.push(medication);
+            updatePrescriptionDisplay();
+        }
+        document.getElementById('medicationSearch').value = '';
+        document.getElementById('medicationResults').style.display = 'none';
+    }
+    
+    function updatePrescriptionDisplay() {
+        const prescriptionText = selectedMedications.map(med => 
+            `${med.name} (${med.generic_name}) - ${med.dosage}`
+        ).join('\n');
+        document.getElementById('prescription').value = prescriptionText;
+    }
+    
+    function removeMedication(index) {
+        selectedMedications.splice(index, 1);
+        updatePrescriptionDisplay();
+    }
+    
+    document.getElementById('medicalRecordForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData);
+        
+        fetch('/doctor/medical-record', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Medical record saved successfully');
+                closeMedicalRecord();
+                location.reload();
+            } else {
+                alert('Error saving medical record');
+            }
+        });
+    });
+    
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        const modal = document.getElementById('medicalRecordModal');
+        if (event.target == modal) {
+            closeMedicalRecord();
+        }
+    }
+    
+    // Hide medication results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#medicationSearch') && !e.target.closest('#medicationResults')) {
+            document.getElementById('medicationResults').style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

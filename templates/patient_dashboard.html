@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 style="margin-bottom: 2rem; color: #fff;">Patient Dashboard</h2>
+
+<div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+    <a href="{{ url_for('view_departments') }}" class="btn btn-secondary">🏢 Browse Departments</a>
+    <a href="{{ url_for('view_medications') }}" class="btn btn-secondary">💊 Medications</a>
+    <a href="{{ url_for('get_notifications') }}" class="btn btn-secondary" style="position: relative;">
+        🔔 Notifications
+        {% if unread_notifications > 0 %}
+        <span style="position: absolute; top: -5px; right: -5px; background: #dc2626; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center;">{{ unread_notifications }}</span>
+        {% endif %}
+    </a>
+</div>
+
+<div class="grid">
+    <!-- Schedule Appointment -->
+    <div class="card">
+        <h3>Schedule New Appointment</h3>
+        <form method="POST" action="{{ url_for('schedule_appointment') }}">
+            <div class="form-group">
+                <label for="doctor_id">Select Doctor:</label>
+                <select id="doctor_id" name="doctor_id" class="form-control" required>
+                    <option value="">Choose a doctor...</option>
+                    {% for doctor in doctors %}
+                    <option value="{{ doctor[0] }}">Dr. {{ doctor[1] }} - {{ doctor[2] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="appointment_date">Date:</label>
+                <input type="date" id="appointment_date" name="appointment_date" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="appointment_time">Time:</label>
+                <select id="appointment_time" name="appointment_time" class="form-control" required>
+                    <option value="">Select time...</option>
+                    <option value="09:00">09:00 AM</option>
+                    <option value="10:00">10:00 AM</option>
+                    <option value="11:00">11:00 AM</option>
+                    <option value="14:00">02:00 PM</option>
+                    <option value="15:00">03:00 PM</option>
+                    <option value="16:00">04:00 PM</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="notes">Notes (optional):</label>
+                <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="Describe your symptoms or reason for visit..."></textarea>
+            </div>
+            <button type="submit" class="btn">Schedule Appointment</button>
+        </form>
+    </div>
+</div>
+
+<!-- My Appointments -->
+<div class="card" style="margin-top: 2rem;">
+    <h3>My Appointments</h3>
+    {% if appointments %}
+    <div style="overflow-x: auto;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Doctor</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for appointment in appointments %}
+                <tr>
+                    <td>Dr. {{ appointment[1] }}</td>
+                    <td>{{ appointment[2] }}</td>
+                    <td>{{ appointment[3] }}</td>
+                    <td><span class="status-{{ appointment[4] }}">{{ appointment[4].title() }}</span></td>
+                    <td>{{ appointment[5] or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: #ccc;">No appointments scheduled yet.</p>
+    {% endif %}
+</div>
+
+<!-- Medical Records -->
+<div class="card" style="margin-top: 2rem;">
+    <h3>Medical Records</h3>
+    {% if medical_records %}
+    <div style="overflow-x: auto;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Doctor</th>
+                    <th>Date</th>
+                    <th>Diagnosis</th>
+                    <th>Prescription</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in medical_records %}
+                <tr>
+                    <td>Dr. {{ record[1] }}</td>
+                    <td>{{ record[5].split()[0] }}</td>
+                    <td>{{ record[2] or '-' }}</td>
+                    <td>{{ record[3] or '-' }}</td>
+                    <td>{{ record[4] or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: #ccc;">No medical records yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Set minimum date to today
+    document.getElementById('appointment_date').min = new Date().toISOString().split('T')[0];
+</script>
+{% endblock %}

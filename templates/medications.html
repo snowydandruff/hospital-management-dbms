@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 style="margin-bottom: 2rem; color: #fff;">Hospital Medications</h2>
+
+{% if session.user_type == 'doctor' %}
+<div class="card" style="margin-bottom: 2rem;">
+    <h3>Add New Medication</h3>
+    <form method="POST" action="{{ url_for('manage_medications') }}">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label for="name">Brand Name:</label>
+                <input type="text" id="name" name="name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="generic_name">Generic Name:</label>
+                <input type="text" id="generic_name" name="generic_name" class="form-control" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="description">Description:</label>
+            <textarea id="description" name="description" class="form-control" rows="2" required></textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label for="dosage">Dosage:</label>
+                <input type="text" id="dosage" name="dosage" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="price">Price ($):</label>
+                <input type="number" step="0.01" id="price" name="price" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="stock_quantity">Stock Quantity:</label>
+                <input type="number" id="stock_quantity" name="stock_quantity" class="form-control" required>
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label for="manufacturer">Manufacturer:</label>
+                <input type="text" id="manufacturer" name="manufacturer" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="side_effects">Side Effects:</label>
+                <input type="text" id="side_effects" name="side_effects" class="form-control">
+            </div>
+        </div>
+        <button type="submit" class="btn">Add Medication</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="card">
+    <h3>Available Medications</h3>
+    <div style="margin-bottom: 1rem;">
+        <input type="text" id="searchMedications" class="form-control" placeholder="Search medications by name or generic name...">
+    </div>
+    
+    {% if medications %}
+    <div style="overflow-x: auto;">
+        <table class="table" id="medicationsTable">
+            <thead>
+                <tr>
+                    <th>Brand Name</th>
+                    <th>Generic Name</th>
+                    <th>Description</th>
+                    <th>Dosage</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    <th>Manufacturer</th>
+                    {% if session.user_type == 'doctor' %}
+                    <th>Side Effects</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for medication in medications %}
+                <tr>
+                    <td><strong>{{ medication[1] }}</strong></td>
+                    <td>{{ medication[2] }}</td>
+                    <td>{{ medication[3] }}</td>
+                    <td>{{ medication[4] }}</td>
+                    <td>${{ "%.2f"|format(medication[6]) }}</td>
+                    <td>
+                        <span style="color: {% if medication[7] > 50 %}#16a34a{% elif medication[7] > 10 %}#fbbf24{% else %}#dc2626{% endif %}">
+                            {{ medication[7] }}
+                        </span>
+                    </td>
+                    <td>{{ medication[8] }}</td>
+                    {% if session.user_type == 'doctor' %}
+                    <td style="font-size: 0.9rem; color: #ccc;">{{ medication[5] or '-' }}</td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: #ccc;">No medications available.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Search functionality
+    document.getElementById('searchMedications').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const table = document.getElementById('medicationsTable');
+        const rows = table.getElementsByTagName('tr');
+        
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            const brandName = row.cells[0].textContent.toLowerCase();
+            const genericName = row.cells[1].textContent.toLowerCase();
+            
+            if (brandName.includes(searchTerm) || genericName.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        }
+    });
+</script>
+{% endblock %}

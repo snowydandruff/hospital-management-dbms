@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 style="margin-bottom: 2rem; color: #fff;">Notifications</h2>
+
+<div style="margin-bottom: 2rem;">
+    <a href="{{ url_for('patient_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+
+<div class="card">
+    <h3>Your Notifications</h3>
+    {% if notifications %}
+    <div style="space-y: 1rem;">
+        {% for notification in notifications %}
+        <div class="alert alert-{{ notification[2] }}" style="position: relative; margin-bottom: 1rem; padding-right: 3rem;">
+            <div style="margin-bottom: 0.5rem;">
+                <strong>{{ notification[1] }}</strong>
+            </div>
+            <div style="font-size: 0.9rem; color: #ccc;">
+                {{ notification[4] }}
+            </div>
+            {% if notification[3] == 0 %}
+            <button onclick="markAsRead({{ notification[0] }})" 
+                    style="position: absolute; top: 0.5rem; right: 0.5rem; background: none; border: none; color: #ccc; cursor: pointer; font-size: 1.2rem;"
+                    title="Mark as read">
+                ✕
+            </button>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color: #ccc;">No notifications yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function markAsRead(notificationId) {
+        fetch(`/mark-notification-read/${notificationId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        });
+    }
+</script>
+{% endblock %}
